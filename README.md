@@ -1,2 +1,2 @@
 # Better Music GPT
-## Generate more-suitable music with AI-Augmented prompt
+## Generate Song with AI-Augmented prompt generation
