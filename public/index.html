@@ -95,6 +95,14 @@
       #scene3 {
         position: relative;
       }
+      #song-title {
+        font-size: 2.2rem; /* 제목 폰트 크기를 키웁니다. */
+        font-weight: 700; /* 굵게 표시합니다. */
+        color: var(--highlight-color); /* 더 밝은 흰색으로 강조합니다. */
+        margin-top: 0;
+        margin-bottom: 20px; /* 오디오 플레이어와의 간격을 줍니다. */
+        text-align: left; /* 왼쪽 정렬을 유지합니다. */
+      }
       #new-song-btn {
         position: absolute;
         top: 0;
@@ -165,6 +173,7 @@
       <div class="player-container">
         <img id="album-cover" src="" alt="Album Cover" />
         <div class="lyrics-section">
+          <h2 id="song-title"></h2>
           <audio id="audio-player" controls></audio>
           <div id="lyrics-container"></div>
         </div>
@@ -227,6 +236,7 @@
         $('#greeting').text(greetings[randomIndex]);
         showScene('scene1');
         $('#loading-percent').text('');
+        $('#lyrics-container').scrollTop(0);
       }
 
       // =================================================
@@ -322,7 +332,7 @@
 
       // Scene 3: 노래 정보 표시 및 플레이어 설정
       function displaySong() {
-        // AppState에 저장된 데이터를 사용
+        $('#song-title').text(AppState.songData.songTitle);
         $('#album-cover').attr('src', AppState.songData.albumCoverUrl);
         $('#audio-player').attr('src', AppState.songData.songUrl);
 
