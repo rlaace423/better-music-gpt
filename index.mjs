@@ -3,7 +3,7 @@ import { GoogleGenAI } from '@google/genai';
 import config from './config.mjs';
 import { generateAugmentedPrompt } from './gemini.mjs';
 import errorHandler from './error-handler.mjs';
-import { generateSong } from './music-gpt.mjs';
+import { generateSong, getSongStatus } from './music-gpt.mjs';
 
 const API_PREFIX = 'api';
 
@@ -35,6 +35,20 @@ app.post(`/${API_PREFIX}/generate-song`, async (req, res) => {
   };
 
   const result = await generateSong(body);
+
+  return res.status(200).json({
+    status: 'success',
+    ...result,
+  });
+});
+
+app.get(`/${API_PREFIX}/get-song-status`, async (req, res) => {
+  const taskId = req.query?.task_id;
+
+  if (!taskId || taskId.length === 0) {
+    throw new Error('task_id에 대한 노래가 존재하지 않습니다!');
+  }
+  const result = await getSongStatus(taskId);
 
   return res.status(200).json({
     status: 'success',
