@@ -1,9 +1,9 @@
 import express from 'express';
-import axios from 'axios';
 import { GoogleGenAI } from '@google/genai';
 import config from './config.mjs';
 import { generateAugmentedPrompt } from './gemini.mjs';
 import errorHandler from './error-handler.mjs';
+import { generateSong } from './music-gpt.mjs';
 
 const API_PREFIX = 'api';
 
@@ -21,6 +21,20 @@ app.post(`/${API_PREFIX}/generate-prompt`, async (req, res) => {
     throw new Error('내용을 입력헤주세요!');
   }
   const result = await generateAugmentedPrompt(prompt, googleGenAI);
+
+  return res.status(200).json({
+    status: 'success',
+    ...result,
+  });
+});
+
+app.post(`/${API_PREFIX}/generate-song`, async (req, res) => {
+  const body = {
+    prompt: req.body?.prompt || '',
+    music_style: req.body?.music_style || '',
+  };
+
+  const result = await generateSong(body);
 
   return res.status(200).json({
     status: 'success',
