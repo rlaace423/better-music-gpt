@@ -203,11 +203,7 @@
       function getPercentage() {
         const percent =
           ((new Date().getTime() - AppState.genSongResult.startTime) / (AppState.genSongResult.eta * 1000)) * 100;
-        if (percent > 100) {
-          return 100;
-        } else {
-          return Math.round(percent);
-        }
+        return Math.round(percent);
       }
 
       // Scene을 전환하는 함수
@@ -278,47 +274,18 @@
         AppState.genSongResult.endTime = new Date().getTime() + genSongResult.eta * 1000;
 
         await startPolling(AppState.genSongResult.taskId);
-        // $.ajax({
-        //   url: '/api/generate-prompt', // 👈 실제 생성 시작 API 주소
-        //   method: 'POST',
-        //   contentType: 'application/json',
-        //   data: JSON.stringify({ prompt: userPrompt }),
-        //   success: function (genPromptResult) {
-        //     console.log(genPromptResult);
-        //     AppState.genPromptResult.answer = genPromptResult.answer;
-        //     AppState.genPromptResult.prompt = genPromptResult.prompt;
-        //     AppState.genPromptResult.genre = genPromptResult.genre;
-        //
-        //     $.ajax({
-        //       url: '/api/generate-song',
-        //       method: 'POST',
-        //       contentType: 'application/json',
-        //       data: JSON.stringify({ prompt: AppState.genPromptResult.prompt, genre: AppState.genPromptResult.genre }),
-        //       success: function (genSongResult) {
-        //         console.log(genSongResult);
-        //         AppState.genSongResult.taskId = genSongResult.task_id;
-        //         AppState.genSongResult.eta = genSongResult.eta;
-        //         AppState.genSongResult.startTime = new Date().getTime();
-        //         AppState.genSongResult.endTime = new Date().getTime() + genSongResult.eta * 1000;
-        //
-        //         startPolling(AppState.genSongResult.taskId); // 받은 task ID로 폴링 시작
-        //       },
-        //       error: function (e) {
-        //         console.error(e);
-        //       },
-        //     });
-        //   },
-        //   error: function (e) {
-        //     console.error(e);
-        //   },
-        // });
       });
 
       // Scene 2: 상태 API 폴링 시작
       async function startPolling(taskId) {
         $('#loading-percent').text(`(${getPercentage()}%)`);
         const percentIntervalId = setInterval(function () {
-          $('#loading-percent').text(`(${getPercentage()}%)`);
+          const percent = getPercentage();
+          if (percent <= 100) {
+            $('#loading-percent').text(`(${getPercentage()}%)`);
+          } else {
+            $('#loading-percent').text(`(조금만 더 기다려주세요.. 🥁)`);
+          }
         }, 500);
 
         while (true) {
@@ -329,7 +296,17 @@
             throw new Error(statusResult?.message); // TODO
           }
 
-          if (statusResult?.conversion?.status === 'COMPLETED') {
+          if (
+            statusResult?.conversion?.status === 'COMPLETED' &&
+            typeof statusResult?.conversion?.title_1 === 'string' &&
+            statusResult.conversion.title_1.length > 0 &&
+            typeof statusResult?.conversion?.conversion_path_1 === 'string' &&
+            statusResult.conversion.conversion_path_1.length > 0 &&
+            typeof statusResult?.conversion?.album_cover_path === 'string' &&
+            statusResult.conversion.album_cover_path.length > 0 &&
+            typeof statusResult?.conversion?.lyrics_timestamped_1 === 'string' &&
+            statusResult.conversion.lyrics_timestamped_1.length > 0
+          ) {
             clearInterval(percentIntervalId);
             AppState.songData.songTitle = statusResult.conversion.title_1;
             AppState.songData.songUrl = statusResult.conversion.conversion_path_1;
@@ -341,34 +318,6 @@
           }
           await sleep(5000);
         }
-        // AppState.pollingIntervalId = setInterval(function () {
-        //   $('#loading-percent').text(`(${getPercentage()}%)`);
-        //   // 상태 객체에 interval ID 저장
-        //   // 🚨 백엔드 API 호출: 노래 생성 상태 확인
-        //   $.ajax({
-        //     url: `/api/get-song-status?task_id=${taskId}`, // 👈 실제 상태 확인 API 주소
-        //     method: 'GET',
-        //     success: function (statusResult) {
-        //       console.log(statusResult);
-        //
-        //       if (statusResult?.conversion?.status === 'COMPLETED') {
-        //         clearInterval(AppState.pollingIntervalId); // 상태 객체의 ID로 interval 중지
-        //
-        //         // 3. API 응답 데이터를 상태 객체에 저장
-        //         AppState.songData = statusResult.data;
-        //
-        //         // 4. 상태 객체의 데이터로 Scene 3 표시
-        //         displaySong();
-        //       }
-        //     },
-        //     error: function (e) {
-        //       console.error(e?.message);
-        //       clearInterval(AppState.pollingIntervalId);
-        //       alert('노래 생성 상태를 확인하는 데 실패했습니다.');
-        //       showScene('scene1');
-        //     },
-        //   });
-        // }, 2000);
       }
 
       // Scene 3: 노래 정보 표시 및 플레이어 설정
