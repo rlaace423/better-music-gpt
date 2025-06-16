@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Music Generator</title>
+    <title>Better Music GPT</title>
     <script src="scripts/jquery-3.7.1.min.js"></script>
     <style>
       /* --- 기본 & 테마 설정 --- */
@@ -131,6 +131,7 @@
         text-align: left;
       }
       #audio-player {
+        color-scheme: dark;
         width: 100%;
         margin-bottom: 20px;
       }
@@ -151,6 +152,29 @@
         color: var(--primary-color);
         font-weight: bold;
         opacity: 1;
+      }
+
+      /* --- 가사창 스크롤바 스타일링 --- */
+
+      /* Firefox 브라우저용 */
+      #lyrics-container {
+        scrollbar-width: thin; /* 스크롤바를 얇게 만듭니다. */
+        scrollbar-color: var(--primary-color) transparent; /* 스크롤바 색상, 배경 색상 순 */
+      }
+
+      /* Chrome, Safari, Edge 등 웹킷 브라우저용 */
+      #lyrics-container::-webkit-scrollbar {
+        width: 10px; /* 스크롤바의 너비 */
+      }
+
+      #lyrics-container::-webkit-scrollbar-track {
+        background: transparent; /* 스크롤바 배경을 투명하게 처리 */
+      }
+
+      #lyrics-container::-webkit-scrollbar-thumb {
+        background-color: var(--primary-color); /* 스크롤바의 막대 부분 */
+        border-radius: 10px; /* 둥근 모서리 */
+        border: 2px solid var(--bg-color); /* 막대와 콘텐츠 사이에 여백 효과 */
       }
     </style>
   </head>
