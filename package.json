@@ -7,7 +7,7 @@
   "type": "commonjs",
   "main": "index.mjs",
   "scripts": {
-    "format": "prettier --write ./",
+    "format": "prettier --write \"**/*.{mjs,html}\"",
     "start": "node index.mjs"
   },
   "dependencies": {

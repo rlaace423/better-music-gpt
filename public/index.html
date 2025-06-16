@@ -1,1 +1,330 @@
-<h2>It works! 한글 테스트</h2>
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Music Generator</title>
+    <script src="jquery-3.7.1.min.js"></script>
+    <style>
+      /* --- 기본 & 테마 설정 --- */
+      @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+
+      :root {
+        --bg-color: #121212;
+        --text-color: #e0e0e0;
+        --primary-color: #1db954; /* Spotify Green */
+        --input-bg-color: #282828;
+        --highlight-color: #ffffff;
+      }
+
+      body {
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: 'Noto Sans KR', sans-serif;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        text-align: center;
+      }
+
+      .scene {
+        width: 100%;
+        max-width: 800px;
+        display: none; /* 모든 scene은 기본적으로 숨김 */
+      }
+
+      /* --- Scene 1: 입력 --- */
+      #scene1 h1 {
+        font-size: 2.5rem;
+        margin-bottom: 30px;
+      }
+      #prompt-input {
+        width: 80%;
+        padding: 15px;
+        font-size: 1.1rem;
+        border-radius: 25px;
+        border: 1px solid var(--input-bg-color);
+        background-color: var(--input-bg-color);
+        color: var(--text-color);
+        margin-bottom: 20px;
+        font-family: inherit;
+        resize: none;
+        min-height: 50px;
+      }
+      #generate-btn {
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        border-radius: 25px;
+        border: none;
+        background-color: var(--primary-color);
+        color: white;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      #generate-btn:hover {
+        transform: scale(1.05);
+      }
+
+      /* --- Scene 2: 로딩 --- */
+      .spinner {
+        border: 8px solid var(--input-bg-color);
+        border-top: 8px solid var(--primary-color);
+        border-radius: 50%;
+        width: 80px;
+        height: 80px;
+        animation: spin 1s linear infinite;
+        margin: 50px auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      #loading-text {
+        font-size: 1.5rem;
+      }
+
+      /* --- Scene 3: 결과 --- */
+      #scene3 {
+        position: relative;
+      }
+      #new-song-btn {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 10px 20px;
+        border-radius: 20px;
+        border: 1px solid var(--text-color);
+        background: none;
+        color: var(--text-color);
+        cursor: pointer;
+      }
+      .player-container {
+        display: flex;
+        gap: 30px;
+        align-items: center;
+        margin-top: 50px;
+      }
+      #album-cover {
+        width: 250px;
+        height: 250px;
+        border-radius: 10px;
+        object-fit: cover;
+      }
+      .lyrics-section {
+        flex-grow: 1;
+        text-align: left;
+      }
+      #audio-player {
+        width: 100%;
+        margin-bottom: 20px;
+      }
+      #lyrics-container {
+        height: 150px;
+        overflow-y: auto;
+        font-size: 1.5rem;
+        line-height: 1.6;
+      }
+      #lyrics-container p {
+        margin: 0;
+        opacity: 0.5;
+        transition:
+          opacity 0.3s,
+          color 0.3s;
+      }
+      #lyrics-container p.highlight {
+        color: var(--primary-color);
+        font-weight: bold;
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="scene1" class="scene">
+      <h1 id="greeting"></h1>
+      <textarea id="prompt-input" rows="3" placeholder="여기에 이야기나 감정을 입력하세요..."></textarea>
+      <br />
+      <button id="generate-btn">노래 생성</button>
+    </div>
+
+    <div id="scene2" class="scene">
+      <div class="spinner"></div>
+      <p id="loading-text">당신만의 노래를 만들고 있어요...</p>
+    </div>
+
+    <div id="scene3" class="scene">
+      <button id="new-song-btn">새로운 노래 만들기</button>
+      <div class="player-container">
+        <img id="album-cover" src="" alt="Album Cover" />
+        <div class="lyrics-section">
+          <audio id="audio-player" controls></audio>
+          <div id="lyrics-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 전역 변수
+      let pollingInterval; // Polling을 멈추기 위한 변수
+
+      // Scene 1의 랜덤 문구
+      const greetings = [
+        '오늘 하루 어떠셨나요?',
+        '어떤 감정을 노래하고 싶으신가요?',
+        '당신의 이야기를 들려주세요.',
+        '세상에 단 하나뿐인 노래를 만들어 보세요.',
+        '어떤 멜로디를 상상하고 계신가요?',
+        '지금의 기분을 음악으로 남겨보세요.',
+        '가장 기억에 남는 순간은 언제였나요?',
+        '음악이 필요한 순간, 당신의 이야기를 시작하세요.',
+        '마음을 울리는 가사를 찾아보세요.',
+        '당신의 감성이 곧 멜로디가 됩니다.',
+      ];
+
+      // Scene을 전환하는 함수
+      function showScene(sceneId) {
+        $('.scene').hide(); // 모든 scene 숨기기
+        $('#' + sceneId).show(); // 지정된 scene만 보여주기
+      }
+
+      // Scene 1: 프롬프트 입력창 이벤트 처리
+      $('#generate-btn').on('click', function () {
+        const userPrompt = $('#prompt-input').val();
+        if (!userPrompt) {
+          alert('노래로 만들고 싶은 이야기를 입력해주세요.');
+          return;
+        }
+
+        // 🚨 백엔드 API 호출: 노래 생성 시작
+        $.ajax({
+          url: '/api/generate-prompt', // 👈 여기에 실제 생성 시작 API 주소를 입력하세요.
+          method: 'POST',
+          contentType: 'application/json',
+          data: JSON.stringify({ prompt: userPrompt }),
+          success: function (response) {
+            // 성공 시, 받은 task ID로 폴링 시작
+            showScene('scene2');
+            startPolling(response.taskId); // API가 taskId를 반환한다고 가정
+          },
+          error: function () {
+            alert('노래 생성 요청에 실패했습니다. 다시 시도해주세요.');
+          },
+        });
+      });
+
+      // Scene 2: 상태 API 폴링 시작
+      function startPolling(taskId) {
+        pollingInterval = setInterval(function () {
+          // 🚨 백엔드 API 호출: 노래 생성 상태 확인
+          $.ajax({
+            url: `/api/get-song-status?id=${taskId}`, // 👈 여기에 실제 상태 확인 API 주소를 입력하세요.
+            method: 'GET',
+            success: function (response) {
+              // ETA가 있다면 퍼센트 표시 (선택사항)
+              if (response.eta) {
+                $('#loading-text').text(`노래를 만들고 있어요... (${response.eta}%)`);
+              }
+
+              if (response.status === 'completed') {
+                clearInterval(pollingInterval);
+                displaySong(response.data); // 생성 완료된 데이터로 Scene 3 표시
+              }
+            },
+            error: function () {
+              clearInterval(pollingInterval);
+              alert('노래 생성 상태를 확인하는 데 실패했습니다.');
+              showScene('scene1'); // 실패 시 다시 Scene 1로
+            },
+          });
+        }, 3000); // 3초마다 상태 확인
+      }
+
+      // Scene 3: 노래 정보 표시 및 플레이어 설정
+      function displaySong(data) {
+        // 예시 데이터 구조:
+        // data = {
+        //     title: "여름밤의 꿈",
+        //     albumCoverUrl: "https://.../cover.jpg",
+        //     songUrl: "https://.../song.mp3",
+        //     lyrics: [
+        //         { time: 5.5, text: "별이 쏟아지는 밤," },
+        //         { time: 9.2, text: "우리는 함께 있었지" },
+        //         { time: 13.8, text: "꿈만 같던 그 순간들" }
+        //     ]
+        // }
+
+        $('#album-cover').attr('src', data.albumCoverUrl);
+        $('#audio-player').attr('src', data.songUrl);
+
+        const $lyricsContainer = $('#lyrics-container');
+        $lyricsContainer.empty(); // 이전 가사 비우기
+
+        data.lyrics.forEach((line) => {
+          // 각 가사 라인에 data-time 속성으로 시간 정보 저장
+          const $p = $('<p>').text(line.text).attr('data-time', line.time);
+          $lyricsContainer.append($p);
+        });
+
+        showScene('scene3');
+      }
+
+      // Scene 3: 노래방 가사 하이라이트 기능
+      $('#audio-player').on('timeupdate', function () {
+        const currentTime = this.currentTime;
+        const $lyrics = $('#lyrics-container p');
+        let currentLine = null;
+
+        $lyrics.each(function () {
+          const lineTime = parseFloat($(this).data('time'));
+          if (currentTime >= lineTime) {
+            currentLine = $(this);
+          }
+        });
+
+        if (currentLine && !currentLine.hasClass('highlight')) {
+          $lyrics.removeClass('highlight');
+          currentLine.addClass('highlight');
+          // 현재 하이라이트된 가사가 잘 보이도록 스크롤 이동
+          $('#lyrics-container').scrollTop(
+            currentLine.offset().top - $('#lyrics-container').offset().top + $('#lyrics-container').scrollTop() - 50,
+          );
+        }
+      });
+
+      // Scene 3: '새로운 노래 만들기' 버튼
+      $('#new-song-btn').on('click', function () {
+        // 오디오 정지 및 리셋
+        const audio = $('#audio-player')[0];
+        audio.pause();
+        audio.currentTime = 0;
+
+        // 폴링 인터벌 확실히 제거
+        if (pollingInterval) clearInterval(pollingInterval);
+
+        // 입력창 비우고 Scene 1로 전환
+        $('#prompt-input').val('');
+        initializeScene1();
+      });
+
+      // 초기화 함수
+      function initializeScene1() {
+        // Scene 1 진입 시 랜덤 문구 설정
+        const randomIndex = Math.floor(Math.random() * greetings.length);
+        $('#greeting').text(greetings[randomIndex]);
+        showScene('scene1');
+      }
+
+      // 문서가 준비되면 첫 Scene 시작
+      $(document).ready(function () {
+        initializeScene1();
+      });
+    </script>
+  </body>
+</html>
