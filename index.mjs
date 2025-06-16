@@ -58,6 +58,6 @@ app.get(`/${API_PREFIX}/get-song-status`, async (req, res) => {
 
 app.use(errorHandler);
 
-app.listen(process.env.PORT, async () => {
+app.listen(process.env.PORT, '0.0.0.0', async () => {
   console.log(`Better-Music-GPT Listening on port ${config.port}`);
 });
