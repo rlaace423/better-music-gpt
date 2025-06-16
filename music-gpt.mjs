@@ -12,13 +12,17 @@ export async function generateSong(body) {
 }
 
 export async function getSongStatus(taskId) {
-  const result = await axios.get(`${MUSIC_GPT_API_BASE_URL}/byId`, {
-    headers: { Authorization: config.musicGptApiKey },
-    params: {
-      conversionType: 'MUSIC_AI',
-      task_id: taskId,
-    },
-  });
-  console.log(result.data);
-  return result.data;
+  try {
+    const result = await axios.get(`${MUSIC_GPT_API_BASE_URL}/byId`, {
+      headers: { Authorization: config.musicGptApiKey },
+      params: {
+        conversionType: 'MUSIC_AI',
+        task_id: taskId,
+      },
+    });
+    console.log(result.data);
+    return result.data;
+  } catch (e) {
+    console.error(e);
+  }
 }
