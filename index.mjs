@@ -16,11 +16,13 @@ app.use(express.static('public'));
 
 app.post(`/${API_PREFIX}/generate-prompt`, async (req, res) => {
   const prompt = req.body?.prompt;
+  const persona = req.body?.persona;
+  const arts_persona = req.body?.arts_persona;
 
   if (!prompt || prompt.length === 0) {
     throw new Error('내용을 입력헤주세요!');
   }
-  const result = await generateAugmentedPrompt(prompt, googleGenAI);
+  const result = await generateAugmentedPrompt(prompt, persona, arts_persona, googleGenAI);
 
   return res.status(200).json({
     status: 'success',

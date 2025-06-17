@@ -46,17 +46,32 @@
         flex-direction: row-reverse;
       }
 
+      #current-persona-wrapper {
+        display: flex;
+        flex-direction: column; /* 아이콘과 이름을 세로로 배치 */
+        align-items: center; /* 가운데 정렬 */
+        cursor: pointer;
+        width: 80px; /* 이름이 길 경우를 대비해 너비 확보 */
+      }
+
       #current-persona {
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        cursor: pointer;
         border: 2px solid var(--text-color);
         transition: transform 0.2s;
       }
 
-      #current-persona:hover {
+      #current-persona-wrapper:hover #current-persona {
         transform: scale(1.1);
+      }
+
+      /* 👇 새로 추가된 이름 스타일 */
+      #current-persona-name {
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-top: 4px;
+        white-space: nowrap; /* 이름이 길어도 한 줄로 표시 */
       }
 
       /* 페르소나 목록 (애니메이션 적용) */
@@ -257,7 +272,10 @@
   </head>
   <body>
     <div id="persona-selector-container">
-      <img id="current-persona" src="" alt="Current Persona" />
+      <div id="current-persona-wrapper">
+        <img id="current-persona" src="" alt="Current Persona" />
+        <span id="current-persona-name"></span>
+      </div>
       <div id="persona-list"></div>
     </div>
 
@@ -292,16 +310,25 @@
       // =================================================
       const personas = [
         {
-          name: 'Friendly Assistant',
-          description: '저는 친절한 친구처럼 당신의 이야기에 공감하고, 그에 맞는 따뜻한 음악을 추천해주는 AI입니다.',
+          name: 'Quintin',
+          persona:
+            'Quintin, a 40-year-old logistician from Converse, TX, balances curiosity with practicality, appreciating both new ideas and established methods, and maintains a unique blend of organization and flexibility in all aspects of life.',
+          arts_persona:
+            "They appreciate the gritty realism of Texas artist David Adickes' sculptures and the soulful melodies of Tejano musician Selena, often visiting the San Antonio Museum of Art and listening to her music while cooking.",
         },
         {
-          name: 'Music Professor',
-          description: '저는 음악 교수처럼 당신의 감정을 분석하고, 음악 이론에 기반한 전문적인 프롬프트를 생성합니다.',
+          name: 'Mauricio',
+          persona:
+            'Mauricio, a reserved yet curious 20-year-old nurse with a passion for photography, balances ambition with pragmatism, preferring intimate gatherings over large social events.',
+          arts_persona:
+            "Mauricio, inspired by the vivid colors of Frida Kahlo's art and the storytelling of Gabriel García Márquez, finds solace in capturing the essence of moments through his photography and exploring local art galleries on weekends.",
         },
         {
-          name: 'Concise Expert',
-          description: '저는 핵심만 파악하여, 가장 간결하고 효율적인 음악 생성 프롬프트를 제안하는 전문가입니다.',
+          name: 'Bonnie',
+          persona:
+            'Bonnie, a sociable Midwesterner, balances curiosity with practicality, hosting potlucks one moment and creating intricate spreadsheets the next, always with a competitive spark in her eye.',
+          arts_persona:
+            'Bonnie, appreciating both new ideas and established methods, enjoys local folk music performances and occasionally visits art galleries, finding inspiration in the works of Grandma Moses.',
         },
       ];
 
@@ -389,7 +416,11 @@
         let response = await fetch('/api/generate-prompt', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: userPrompt }),
+          body: JSON.stringify({
+            prompt: userPrompt,
+            persona: AppState.currentPersona.persona,
+            arts_persona: AppState.currentPersona.arts_persona,
+          }),
         });
         const genPromptResult = await response.json();
         console.log(genPromptResult);
@@ -526,6 +557,7 @@
 
           // 기본 페르소나 아이콘 설정
           $('#current-persona').attr('src', getGravatarUrl(AppState.currentPersona.name));
+          $('#current-persona-name').text(AppState.currentPersona.name);
         }
 
         initializePersonaSelector();
@@ -547,10 +579,10 @@
           if (selectedPersona) {
             // 1. 전역 상태(AppState) 업데이트
             AppState.currentPersona = selectedPersona;
-            console.log('페르소나 변경:', AppState.currentPersona.description);
 
             // 2. 현재 페르소나 아이콘 이미지 변경
             $('#current-persona').attr('src', getGravatarUrl(selectedPersona.name));
+            $('#current-persona-name').text(selectedPersona.name);
 
             // 3. 목록 숨기기
             $('#persona-list').removeClass('active');
