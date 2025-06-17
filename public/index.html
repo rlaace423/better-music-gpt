@@ -9,6 +9,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <script src="scripts/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-md5@0.8.3/src/md5.min.js"></script>
     <style>
       /* --- 기본 & 테마 설정 --- */
       @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
@@ -32,6 +33,78 @@
         align-items: center;
         min-height: 100vh;
         text-align: center;
+      }
+
+      /* --- 페르소나 선택기 스타일 --- */
+      #persona-selector-container {
+        position: fixed; /* 화면 기준으로 위치 고정 */
+        top: 20px;
+        right: 20px;
+        z-index: 1000; /* 다른 요소들 위에 표시 */
+        display: flex;
+        align-items: center;
+        flex-direction: row-reverse;
+      }
+
+      #current-persona {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid var(--text-color);
+        transition: transform 0.2s;
+      }
+
+      #current-persona:hover {
+        transform: scale(1.1);
+      }
+
+      /* 페르소나 목록 (애니메이션 적용) */
+      #persona-list {
+        display: flex;
+        gap: 15px;
+        padding: 10px;
+        background-color: rgba(40, 40, 40, 0.8);
+        backdrop-filter: blur(5px); /* 배경 블러 효과 */
+        border-radius: 20px;
+        margin-left: 10px;
+
+        /* 초기 상태 (숨겨진 상태) */
+        visibility: hidden;
+        opacity: 0;
+        transform: translateX(-20px); /* 오른쪽으로 살짝 이동된 상태에서 시작 */
+        transition: all 0.4s ease-in-out;
+      }
+
+      /* 활성화 상태 (펼쳐진 상태) */
+      #persona-list.active {
+        visibility: visible;
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .persona-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .persona-item:hover {
+        transform: scale(1.1);
+      }
+
+      .persona-item img {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+      }
+
+      .persona-item span {
+        font-size: 0.8rem;
+        font-weight: bold;
       }
 
       .scene {
@@ -183,6 +256,11 @@
     </style>
   </head>
   <body>
+    <div id="persona-selector-container">
+      <img id="current-persona" src="" alt="Current Persona" />
+      <div id="persona-list"></div>
+    </div>
+
     <div id="scene1" class="scene">
       <h1 id="greeting"></h1>
       <textarea id="prompt-input" rows="3" placeholder="여기에 이야기나 감정을 입력하세요..."></textarea>
@@ -210,9 +288,28 @@
 
     <script>
       // =================================================
+      // 페르소나 데이터 정의
+      // =================================================
+      const personas = [
+        {
+          name: 'Friendly Assistant',
+          description: '저는 친절한 친구처럼 당신의 이야기에 공감하고, 그에 맞는 따뜻한 음악을 추천해주는 AI입니다.',
+        },
+        {
+          name: 'Music Professor',
+          description: '저는 음악 교수처럼 당신의 감정을 분석하고, 음악 이론에 기반한 전문적인 프롬프트를 생성합니다.',
+        },
+        {
+          name: 'Concise Expert',
+          description: '저는 핵심만 파악하여, 가장 간결하고 효율적인 음악 생성 프롬프트를 제안하는 전문가입니다.',
+        },
+      ];
+
+      // =================================================
       // 1. 모든 공유 데이터를 담을 '상태 객체' 선언
       // =================================================
       const AppStateTemplate = {
+        currentPersona: personas[0],
         genPromptResult: { answer: '', prompt: '', genre: '' },
         genSongResult: { taskId: '', eta: 0 },
         songData: { songTitle: '', songUrl: '', albumCoverUrl: '', lyrics: [] },
@@ -235,6 +332,14 @@
 
       async function sleep(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      function getGravatarUrl(name, size = 80) {
+        // Gravatar는 이메일 해시를 사용하지만, 아무 문자열이나 넣어도 기본 아이콘(identicon)을 생성해줍니다.
+        // 여기서는 페르소나 이름을 사용합니다.
+        const processed = name.trim().toLowerCase();
+        const hash = md5(processed);
+        return `https://www.gravatar.com/avatar/${hash}?d=identicon&s=${size}`;
       }
 
       function getPercentage() {
@@ -403,7 +508,61 @@
 
       // 문서가 준비되면 첫 Scene 시작
       $(document).ready(function () {
+        // --- 페르소나 선택기 초기화 ---
+        function initializePersonaSelector() {
+          const $personaList = $('#persona-list');
+          $personaList.empty(); // 목록 비우기
+
+          // 데이터 기반으로 페르소나 목록 아이템 생성
+          for (const persona of personas) {
+            const itemHtml = `
+                <div class="persona-item" data-name="${persona.name}">
+                    <img src="${getGravatarUrl(persona.name)}" alt="${persona.name}">
+                    <span>${persona.name}</span>
+                </div>
+            `;
+            $personaList.append(itemHtml);
+          }
+
+          // 기본 페르소나 아이콘 설정
+          $('#current-persona').attr('src', getGravatarUrl(AppState.currentPersona.name));
+        }
+
+        initializePersonaSelector();
         resetStateAndGoToScene1(); // 초기 진입 시에도 초기화 함수 사용
+
+        // --- 페르소나 선택기 이벤트 핸들러 ---
+
+        // 현재 페르소나 아이콘 클릭 시 목록 펼치기/접기
+        $('#current-persona').on('click', function (e) {
+          e.stopPropagation(); // 이벤트 버블링 방지
+          $('#persona-list').toggleClass('active');
+        });
+
+        // 목록에서 특정 페르소나 아이템 클릭 시
+        $('#persona-list').on('click', '.persona-item', function () {
+          const selectedName = $(this).data('name');
+          const selectedPersona = personas.find((p) => p.name === selectedName);
+
+          if (selectedPersona) {
+            // 1. 전역 상태(AppState) 업데이트
+            AppState.currentPersona = selectedPersona;
+            console.log('페르소나 변경:', AppState.currentPersona.description);
+
+            // 2. 현재 페르소나 아이콘 이미지 변경
+            $('#current-persona').attr('src', getGravatarUrl(selectedPersona.name));
+
+            // 3. 목록 숨기기
+            $('#persona-list').removeClass('active');
+          }
+        });
+
+        // 화면의 다른 곳을 클릭하면 목록 숨기기
+        $(document).on('click', function (e) {
+          if (!$(e.target).closest('#persona-selector-container').length) {
+            $('#persona-list').removeClass('active');
+          }
+        });
       });
     </script>
   </body>
