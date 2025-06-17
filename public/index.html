@@ -162,6 +162,15 @@
       }
 
       /* --- Scene 2: 로딩 --- */
+      #loading-album-cover {
+        width: 250px;
+        height: 250px;
+        border-radius: 15px;
+        object-fit: cover;
+        margin: 40px auto 20px auto; /* 위, 좌우, 아래 마진 */
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5); /* 입체감 효과 */
+      }
+
       .spinner {
         border: 8px solid var(--input-bg-color);
         border-top: 8px solid var(--primary-color);
@@ -179,6 +188,18 @@
           transform: rotate(360deg);
         }
       }
+      .inline-spinner {
+        display: inline-block; /* 텍스트 옆에 위치하도록 설정 */
+        width: 16px;
+        height: 16px;
+        border: 3px solid var(--input-bg-color);
+        border-top: 3px solid var(--primary-color);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        vertical-align: middle; /* 텍스트와 세로 중앙 정렬 */
+        margin-right: 8px; /* 텍스트와의 간격 */
+      }
+
       #loading-text {
         font-size: 1.4rem; /* 긴 문단을 위해 폰트 크기 살짝 조정 */
         line-height: 1.6; /* 가독성을 위한 줄 간격 추가 */
@@ -292,9 +313,13 @@
     </div>
 
     <div id="scene2" class="scene">
+      <img id="loading-album-cover" src="" alt="Album cover is generating..." style="display: none" />
       <div class="spinner"></div>
-      <p id="loading-text">당신만의 노래를 만들고 있어요...</p>
-      <p id="loading-percent"></p>
+      <p id="loading-text"></p>
+      <p id="loading-percent">
+        <span class="inline-spinner" style="display: none"></span>
+        <span id="percent-text"></span>
+      </p>
     </div>
 
     <div id="scene3" class="scene">
@@ -362,6 +387,8 @@
         '당신의 감성이 곧 멜로디가 됩니다.',
       ];
 
+      const defaultLoadingText = '제가 당신의 이야기를 듣고 있어요...';
+
       async function sleep(ms) {
         return new Promise((resolve) => setTimeout(resolve, ms));
       }
@@ -403,7 +430,14 @@
         const randomIndex = Math.floor(Math.random() * greetings.length);
         $('#greeting').text(greetings[randomIndex]);
         showScene('scene1');
-        $('#loading-percent').text('');
+
+        // Scene 2 초기화
+        $('#loading-album-cover').hide().attr('src', ''); // 앨범 커버 숨기고 소스 비우기
+        $('.spinner').show(); // 스피너 다시 보여주기
+
+        $('#loading-text').text(defaultLoadingText);
+        $('#percent-text').text('');
+        $('.inline-spinner').hide();
         $('#lyrics-container').scrollTop(0);
       }
 
@@ -420,7 +454,7 @@
         }
 
         // 먼저 로딩 화면으로 전환 준비
-        $('#loading-text').text('제가 당신의 이야기를 듣고 있어요...'); // 기본 로딩 텍스트
+        $('#loading-text').text(defaultLoadingText); // 기본 로딩 텍스트
         showScene('scene2');
         // 🚨 백엔드 API 호출: 노래 생성 시작
         let response = await fetch('/api/generate-prompt', {
@@ -465,13 +499,15 @@
 
       // Scene 2: 상태 API 폴링 시작
       async function startPolling(taskId) {
-        $('#loading-percent').text(`(${getPercentage()}%)`);
+        $('.inline-spinner').show();
+
+        $('#percent-text').text(`${getPercentage()}%`);
         const percentIntervalId = setInterval(function () {
           const percent = getPercentage();
           if (percent <= 100) {
-            $('#loading-percent').text(`(${getPercentage()}%)`);
+            $('#percent-text').text(`${getPercentage()}%`);
           } else {
-            $('#loading-percent').text(`(조금만 더 기다려주세요.. 🥁)`);
+            $('#percent-text').text(`조금만 더 기다려주세요.. 🥁`);
           }
         }, 500);
 
@@ -480,7 +516,17 @@
           const statusResult = await response.json();
           console.log(statusResult);
           if (!response.ok) {
+            clearInterval(percentIntervalId); // 에러 발생 시 퍼센트 인터벌도 중지
             throw new Error(statusResult?.message); // TODO
+          }
+
+          const albumCoverPath = statusResult?.conversion?.album_cover_path;
+          // 앨범 커버 경로가 있고, 아직 화면에 표시되지 않았다면
+          if (albumCoverPath && $('#loading-album-cover').is(':hidden')) {
+            $('.spinner').hide(); // 스피너 숨기기
+            $('#loading-album-cover')
+              .attr('src', albumCoverPath) // 이미지 소스 설정
+              .fadeIn(); // 부드럽게 나타나기
           }
 
           if (
@@ -496,6 +542,7 @@
             statusResult.conversion.lyrics_timestamped_1.length > 0
           ) {
             clearInterval(percentIntervalId);
+            $('.inline-spinner').hide();
             AppState.songData.songTitle = statusResult.conversion.title_1;
             AppState.songData.songUrl = statusResult.conversion.conversion_path_1;
             AppState.songData.albumCoverUrl = statusResult.conversion.album_cover_path;
