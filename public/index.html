@@ -180,7 +180,12 @@
         }
       }
       #loading-text {
-        font-size: 1.5rem;
+        font-size: 1.4rem; /* 긴 문단을 위해 폰트 크기 살짝 조정 */
+        line-height: 1.6; /* 가독성을 위한 줄 간격 추가 */
+        text-align: left; /* 긴 글은 왼쪽 정렬이 더 읽기 편합니다. */
+        padding: 0 20px; /* 좌우 여백으로 답답함 해소 */
+        margin-top: 20px; /* 스피너와의 간격 확보 */
+        white-space: pre-wrap; /* \n과 같은 줄바꿈 문자를 인식하도록 설정 */
       }
 
       /* --- Scene 3: 결과 --- */
@@ -388,7 +393,10 @@
         audio.pause();
         audio.src = '';
 
+        const currentPersona = AppState.currentPersona;
         AppState = JSON.parse(JSON.stringify(AppStateTemplate));
+        // persona는 유지
+        AppState.currentPersona = currentPersona;
 
         // DOM 초기화 및 Scene 1으로 전환
         $('#prompt-input').val('');
@@ -411,6 +419,8 @@
           return;
         }
 
+        // 먼저 로딩 화면으로 전환 준비
+        $('#loading-text').text('제가 당신의 이야기를 듣고 있어요...'); // 기본 로딩 텍스트
         showScene('scene2');
         // 🚨 백엔드 API 호출: 노래 생성 시작
         let response = await fetch('/api/generate-prompt', {
@@ -427,6 +437,9 @@
         if (!response.ok) {
           throw new Error(genPromptResult?.message); // TODO
         }
+
+        // 👇 1. 응답 받은 answer를 로딩 텍스트로 설정합니다.
+        $('#loading-text').text(genPromptResult.answer);
 
         AppState.genPromptResult.answer = genPromptResult.answer;
         AppState.genPromptResult.prompt = genPromptResult.prompt;
