@@ -125,7 +125,20 @@
       .scene {
         width: 100%;
         max-width: 800px;
-        display: none; /* 모든 scene은 기본적으로 숨김 */
+        /* 모든 scene을 같은 위치에 겹치게 설정 */
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+
+        /* 기본적으로는 투명하게 숨겨둠 */
+        opacity: 0;
+
+        /* display: none 대신 opacity와 pointer-events로 제어 */
+        pointer-events: none;
+
+        /* opacity가 변할 때 0.5초 동안 부드럽게 애니메이션 적용 */
+        transition: opacity 0.5s ease-in-out;
       }
 
       /* --- Scene 1: 입력 --- */
@@ -210,9 +223,6 @@
       }
 
       /* --- Scene 3: 결과 --- */
-      #scene3 {
-        position: relative;
-      }
       #song-title {
         font-size: 2.2rem; /* 제목 폰트 크기를 키웁니다. */
         font-weight: 700; /* 굵게 표시합니다. */
@@ -366,6 +376,7 @@
       // 1. 모든 공유 데이터를 담을 '상태 객체' 선언
       // =================================================
       const AppStateTemplate = {
+        greetingIntervalId: null,
         currentPersona: personas[0],
         genPromptResult: { answer: '', prompt: '', genre: '' },
         genSongResult: { taskId: '', eta: 0 },
@@ -393,6 +404,40 @@
         return new Promise((resolve) => setTimeout(resolve, ms));
       }
 
+      // 환영 메시지 애니메이션을 시작하는 함수
+      function startGreetingAnimation() {
+        // 이미 실행 중인 애니메이션이 있다면 중복 실행 방지
+        if (AppState.greetingIntervalId) return;
+
+        const $greeting = $('#greeting');
+
+        // 1초마다 텍스트를 변경하는 함수
+        const changeGreeting = () => {
+          $greeting.fadeTo(400, 0, function () {
+            // 0.4초 동안 사라지기
+            const currentText = $(this).text();
+            let newText;
+            // 현재와 다른 텍스트가 선택될 때까지 반복
+            do {
+              newText = greetings[Math.floor(Math.random() * greetings.length)];
+            } while (newText === currentText);
+
+            $(this).text(newText).fadeTo(400, 1); // 텍스트 변경 후 0.4초 동안 나타나기
+          });
+        };
+
+        // 1.5초(1500ms)마다 changeGreeting 함수 실행
+        AppState.greetingIntervalId = setInterval(changeGreeting, 3000);
+      }
+
+      // 환영 메시지 애니메이션을 중지하는 함수
+      function stopGreetingAnimation() {
+        if (AppState.greetingIntervalId) {
+          clearInterval(AppState.greetingIntervalId);
+          AppState.greetingIntervalId = null;
+        }
+      }
+
       function getGravatarUrl(name, size = 80) {
         // Gravatar는 이메일 해시를 사용하지만, 아무 문자열이나 넣어도 기본 아이콘(identicon)을 생성해줍니다.
         // 여기서는 페르소나 이름을 사용합니다.
@@ -409,12 +454,46 @@
 
       // Scene을 전환하는 함수
       function showScene(sceneId) {
-        $('.scene').hide();
-        $('#' + sceneId).show();
+        const $nextScene = $('#' + sceneId);
+
+        // 현재 화면에 보이는 Scene을 찾습니다.
+        // opacity가 0보다 큰 요소를 찾거나, 간단하게는 :visible 선택자를 사용할 수 있습니다.
+        const $currentScene = $('.scene').filter(':visible');
+
+        // 현재 보이는 Scene이 있다면
+        if ($currentScene.length > 0) {
+          // 현재 Scene과 다음에 보여줄 Scene이 다를 경우에만 애니메이션 실행
+          if ($currentScene.attr('id') !== sceneId) {
+            $currentScene.css('pointer-events', 'none'); // 사라지는 동안 클릭 방지
+            $currentScene.fadeTo(500, 0, function () {
+              // 0.5초 동안 투명하게
+              $(this).hide(); // 애니메이션 후 완전히 숨김
+              // Scene 1이 나타날 때 애니메이션 시작
+              if (sceneId === 'scene1') {
+                startGreetingAnimation();
+              }
+              $nextScene.show().fadeTo(500, 1, function () {
+                // 0.5초 동안 나타나기
+                $(this).css('pointer-events', 'auto'); // 나타난 후 다시 클릭 가능하게
+              });
+            });
+          }
+        } else {
+          // 현재 보이는 Scene이 없다면 (페이지 최초 로드 시)
+          // Scene 1이 나타날 때 애니메이션 시작
+          if (sceneId === 'scene1') {
+            startGreetingAnimation();
+          }
+          $nextScene.show().fadeTo(500, 1, function () {
+            $(this).css('pointer-events', 'auto');
+          });
+        }
       }
 
       // 상태 객체를 초기 상태로 되돌리는 함수
       function resetStateAndGoToScene1() {
+        stopGreetingAnimation(); // ✒️ 추가: 리셋 시 애니메이션 확실하게 중지
+
         // 오디오 정지 및 리셋
         const audio = $('#audio-player')[0];
         audio.pause();
@@ -439,6 +518,10 @@
         $('#percent-text').text('');
         $('.inline-spinner').hide();
         $('#lyrics-container').scrollTop(0);
+
+        // 👇 모든 scene을 즉시 숨기고, showScene을 통해 scene1만 fade-in 시킵니다.
+        $('.scene').stop(true, true).hide();
+        showScene('scene1');
       }
 
       // =================================================
@@ -447,6 +530,8 @@
 
       // Scene 1: 프롬프트 입력창 이벤트 처리
       $('#generate-btn').on('click', async function () {
+        stopGreetingAnimation(); // ✒️ 추가: Scene 2로 넘어가기 전 애니메이션 중지
+
         const userPrompt = $('#prompt-input').val();
         if (!userPrompt) {
           alert('노래로 만들고 싶은 이야기를 입력해주세요.');
