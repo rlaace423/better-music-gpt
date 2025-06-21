@@ -318,6 +318,79 @@
         border-radius: 10px; /* 둥근 모서리 */
         border: 2px solid var(--bg-color); /* 막대와 콘텐츠 사이에 여백 효과 */
       }
+
+      /* ========================================= */
+      /* --- 모바일 반응형 스타일 (Responsive) --- */
+      /* ========================================= */
+      @media screen and (max-width: 768px) {
+        /* 화면 너비가 768px 이하일 때 이 스타일들이 적용됩니다. */
+
+        body {
+          padding: 10px; /* 전체적인 여백을 줄입니다. */
+        }
+
+        /* --- 상단 로고 및 페르소나 아이콘 조정 --- */
+        #logo {
+          top: 15px;
+          left: 15px;
+          font-size: 1.2rem; /* 로고 크기 살짝 줄이기 */
+        }
+
+        #persona-selector-container {
+          top: 15px;
+          right: 15px;
+        }
+
+        .scene {
+          /* 모바일에서는 scene이 화면을 꽉 채우도록 조정 */
+          padding-top: 60px; /* 상단 로고/아이콘과 겹치지 않도록 여백 */
+          padding-bottom: 20px;
+          /* position: absolute 중앙정렬은 유지 */
+        }
+
+        /* --- Scene 1: 입력 화면 조정 --- */
+        #scene1 h1 {
+          font-size: 2rem; /* 제목 크기 줄이기 */
+        }
+        #prompt-input {
+          width: 90%; /* 입력창 너비 확대 */
+        }
+
+        /* --- Scene 3: 플레이어 화면 레이아웃 변경 (핵심) --- */
+        .player-container {
+          /* 기존: 가로(row) 배치 -> 모바일: 세로(column) 배치 */
+          flex-direction: column;
+          margin-top: 20px;
+          gap: 20px;
+        }
+
+        #album-cover {
+          /* 앨범 커버 크기를 화면에 맞게 유동적으로 조정 */
+          width: 70vw; /* 화면 너비의 70% */
+          height: 70vw; /* 정사각형 유지 */
+          max-width: 250px; /* 너무 커지지는 않게 */
+          max-height: 250px;
+        }
+
+        .lyrics-section {
+          width: 100%;
+          /* 모바일에서는 가사 관련 요소들을 가운데 정렬 */
+          text-align: center;
+        }
+
+        #song-title {
+          /* 부모 요소가 가운데 정렬이므로, 제목도 가운데 정렬로 변경 */
+          text-align: center;
+          font-size: 1.8rem; /* 모바일 화면에 맞게 크기 조정 */
+        }
+
+        #new-song-btn {
+          /* 우측 상단 고정 대신, 다른 요소들과의 흐름에 맞게 위치 변경 */
+          position: relative;
+          display: block;
+          margin: 30px auto 0 auto; /* 플레이어 아래쪽에 배치 */
+        }
+      }
     </style>
   </head>
   <body>
