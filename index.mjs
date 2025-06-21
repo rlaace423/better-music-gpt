@@ -26,6 +26,7 @@ app.post(`/${API_PREFIX}/generate-prompt`, async (req, res) => {
 
   return res.status(200).json({
     status: 'success',
+    originalPrompt: prompt,
     ...result,
   });
 });

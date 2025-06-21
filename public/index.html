@@ -48,7 +48,26 @@
         cursor: pointer; /* 클릭 가능하다는 표시 */
         text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* 텍스트가 돋보이게 하는 그림자 효과 */
       }
+      /* ... 기존 #logo 스타일 ... */
+      #logo {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        z-index: 1000;
+        font-size: 1.6rem;
+        font-weight: 700;
+        color: var(--highlight-color);
+        cursor: pointer;
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+      }
 
+      /* 👇 여기에 새로운 클래스 스타일을 추가합니다. */
+      .logo-accent {
+        color: var(--primary-color);
+      }
+
+      /* --- 페르소나 선택기 스타일 --- */
+      /* ... 기존 스타일 ... */
       /* --- 페르소나 선택기 스타일 --- */
       #persona-selector-container {
         position: fixed; /* 화면 기준으로 위치 고정 */
@@ -394,7 +413,7 @@
     </style>
   </head>
   <body>
-    <div id="logo">Better MusicGPT</div>
+    <div id="logo"><span class="logo-accent">Better</span> MusicGPT</div>
     <div id="persona-selector-container">
       <div id="current-persona-wrapper">
         <img id="current-persona" src="" alt="Current Persona" />
