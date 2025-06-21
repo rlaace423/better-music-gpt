@@ -35,6 +35,20 @@
         text-align: center;
       }
 
+      /* 👇 여기에 로고 스타일 코드를 추가합니다. */
+      #logo {
+        position: fixed; /* 화면 기준으로 위치 고정 */
+        top: 20px;
+        left: 20px;
+        z-index: 1000; /* 다른 요소들 위에 표시 */
+
+        font-size: 1.6rem;
+        font-weight: 700; /* 굵은 글씨체 */
+        color: var(--highlight-color); /* 가장 밝은 흰색 */
+        cursor: pointer; /* 클릭 가능하다는 표시 */
+        text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* 텍스트가 돋보이게 하는 그림자 효과 */
+      }
+
       /* --- 페르소나 선택기 스타일 --- */
       #persona-selector-container {
         position: fixed; /* 화면 기준으로 위치 고정 */
@@ -307,6 +321,7 @@
     </style>
   </head>
   <body>
+    <div id="logo">Better MusicGPT</div>
     <div id="persona-selector-container">
       <div id="current-persona-wrapper">
         <img id="current-persona" src="" alt="Current Persona" />
@@ -737,6 +752,14 @@
         $(document).on('click', function (e) {
           if (!$(e.target).closest('#persona-selector-container').length) {
             $('#persona-list').removeClass('active');
+          }
+        });
+
+        // --- 로고 클릭 시 첫 화면으로 ---
+        $('#logo').on('click', function () {
+          // 현재 1번 씬이 아닐 경우에만 리셋 함수 호출
+          if (!$('#scene1').is(':visible')) {
+            resetStateAndGoToScene1();
           }
         });
       });
