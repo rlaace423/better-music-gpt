@@ -58,8 +58,9 @@ export async function findPersona(description, googleGenAI) {
             },
             recommendationMessage: {
               type: Type.STRING,
+              // 👇 이 description 부분을 수정합니다.
               description:
-                "A personalized recommendation message for the user, written in Korean. It should explain why the chosen persona is a good match. For example: '~~한 당신의 모습은 ~~한 페르소나인 ~~와 닮았네요! 이런 점을 고려하여 추천해 드립니다.'",
+                "A personalized recommendation message for the user, written in Korean. It MUST wrap the chosen persona's name with single asterisks. For example: '...페르소나인 *Quintin*을 추천합니다.'",
             },
           },
           required: ['personaIndex', 'recommendationMessage'],

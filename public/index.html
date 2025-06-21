@@ -199,6 +199,10 @@
       #current-persona-wrapper:hover #current-persona {
         transform: scale(1.1);
       }
+      .highlight-persona {
+        color: var(--primary-color);
+        font-weight: bold;
+      }
 
       /* 👇 새로 추가된 이름 스타일 */
       #current-persona-name {
@@ -1044,11 +1048,14 @@
               $('#current-persona-name').text(selectedPersona.name);
 
               // 3. 모달 내부 Scene 전환: 결과 표시
-              const modalResultTextHtml =
-                typeof result.recommendationMessage !== 'string' || result.recommendationMessage.trim().length === 0
-                  ? `당신과 가장 어울리는 페르소나는<br><strong>'${selectedPersona.name}'</strong> 입니다!`
-                  : result.recommendationMessage;
-              $('#modal-result-text').html(modalResultTextHtml);
+              let formattedMessage = `당신과 가장 어울리는 페르소나는<br><strong>'${selectedPersona.name}'</strong> 입니다!`;
+              if (typeof result.recommendationMessage === 'string' && result.recommendationMessage.trim().length > 0) {
+                formattedMessage = result.recommendationMessage.replace(
+                  /\*(.+?)\*/g,
+                  '<span class="highlight-persona">$1</span>',
+                );
+              }
+              $('#modal-result-text').html(formattedMessage);
               $('#modal-scene-loading').hide();
               $('#modal-scene-result').show();
 
