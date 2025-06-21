@@ -2,7 +2,7 @@ import express from 'express';
 import { GoogleGenAI } from '@google/genai';
 import config from './config.mjs';
 import personas from './personas.mjs';
-import { generateAugmentedPrompt } from './gemini.mjs';
+import { findPersona, generateAugmentedPrompt } from './gemini.mjs';
 import errorHandler from './error-handler.mjs';
 import { generateSong, getSongStatus } from './music-gpt.mjs';
 
@@ -17,6 +17,17 @@ app.use(express.static('public'));
 
 app.get(`/${API_PREFIX}/personas`, (req, res) => {
   return res.json(personas);
+});
+
+app.post(`/${API_PREFIX}/find-persona`, async (req, res) => {
+  const { description } = req.body;
+
+  if (!description || description.length === 0) {
+    throw new Error('description과 personas 배열이 필요합니다.');
+  }
+  const result = await findPersona(description, googleGenAI);
+
+  return res.json({ personaIndex: result, persona: personas[result] });
 });
 
 app.post(`/${API_PREFIX}/generate-prompt`, async (req, res) => {

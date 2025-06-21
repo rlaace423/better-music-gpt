@@ -66,8 +66,109 @@
         color: var(--primary-color);
       }
 
-      /* --- 페르소나 선택기 스타일 --- */
-      /* ... 기존 스타일 ... */
+      /* --- 페르소나 찾기 버튼 및 모달 스타일 --- */
+      #find-persona-btn {
+        /* 👇 기존 페르소나 wrapper와 동일한 스타일 적용 */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        width: 80px;
+        transition: transform 0.2s;
+        margin-left: 10px;
+      }
+
+      #find-persona-btn:hover {
+        transform: scale(1.1);
+      }
+
+      #find-persona-btn img {
+        /* 👇 기존 페르소나 아이콘과 동일한 스타일 적용 */
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        border: 2px solid var(--text-color);
+        background-color: var(--primary-color); /* 녹색 배경 */
+      }
+
+      #find-persona-btn span {
+        /* 👇 기존 페르소나 이름과 동일한 스타일 적용 */
+        font-size: 0.8rem;
+        font-weight: bold;
+        margin-top: 4px;
+        white-space: nowrap;
+      }
+
+      /* 모달 배경 오버레이 */
+      #persona-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        z-index: 1999;
+        backdrop-filter: blur(5px);
+      }
+
+      /* 모달 창 */
+      #persona-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 500px;
+        background-color: var(--input-bg-color);
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        z-index: 2000;
+        text-align: center;
+      }
+      #modal-close-btn {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        background: none;
+        border: none;
+        color: var(--text-color);
+        font-size: 2rem;
+        cursor: pointer;
+        opacity: 0.7;
+      }
+      #persona-modal h2 {
+        margin-top: 0;
+        color: var(--highlight-color);
+      }
+      #user-description-input {
+        width: 95%;
+        /* 기존 #prompt-input과 유사한 스타일 */
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        border: 1px solid #444;
+        border-radius: 10px;
+        padding: 10px;
+        font-family: inherit;
+        font-size: 1rem;
+        margin: 15px 0;
+      }
+      #modal-find-btn {
+        /* 기존 #generate-btn과 유사한 스타일 */
+        padding: 12px 25px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        border-radius: 25px;
+        border: none;
+        background-color: var(--primary-color);
+        color: white;
+        cursor: pointer;
+      }
+      #modal-result-text {
+        font-size: 1.2rem;
+        line-height: 1.6;
+      }
+
       /* --- 페르소나 선택기 스타일 --- */
       #persona-selector-container {
         position: fixed; /* 화면 기준으로 위치 고정 */
@@ -413,8 +514,38 @@
     </style>
   </head>
   <body>
+    <div id="persona-modal-overlay" style="display: none"></div>
+    <div id="persona-modal" style="display: none">
+      <button id="modal-close-btn">&times;</button>
+
+      <div id="modal-scene-input">
+        <h2>당신은 어떤 사람인가요?</h2>
+        <p>자신을 자유롭게 표현해주세요. 어울리는 페르소나를 찾아드릴게요.</p>
+        <textarea
+          id="user-description-input"
+          rows="4"
+          placeholder="예: 저는 조용한 곳에서 책 읽는 것을 좋아하고, 가끔은 새로운 사람들과 어울리는 것도 즐겨요."
+        ></textarea>
+        <button id="modal-find-btn">페르소나 찾기</button>
+      </div>
+
+      <div id="modal-scene-loading" style="display: none">
+        <div class="spinner"></div>
+        <p>가장 어울리는 페르소나를 찾고 있습니다...</p>
+      </div>
+
+      <div id="modal-scene-result" style="display: none">
+        <h2>페르소나 추천</h2>
+        <p id="modal-result-text"></p>
+      </div>
+    </div>
     <div id="logo"><span class="logo-accent">Better</span> MusicGPT</div>
     <div id="persona-selector-container">
+      <div id="find-persona-btn" title="나와 어울리는 페르소나 찾기">
+        <img src="images/find_persona.png" alt="Find Persona" />
+        <span>페르소나 찾기</span>
+      </div>
+
       <div id="current-persona-wrapper">
         <img id="current-persona" src="" alt="Current Persona" />
         <span id="current-persona-name"></span>
@@ -847,6 +978,87 @@
           // 현재 1번 씬이 아닐 경우에만 리셋 함수 호출
           if (!$('#scene1').is(':visible')) {
             resetStateAndGoToScene1();
+          }
+        });
+
+        // =================================================
+        // --- 페르소나 찾기 모달 관련 로직 ---
+        // =================================================
+        function openPersonaModal() {
+          // 모달 내부 상태 초기화
+          $('#user-description-input').val('');
+          $('#modal-scene-input').show();
+          $('#modal-scene-loading, #modal-scene-result').hide();
+
+          // 모달과 오버레이 표시
+          $('#persona-modal-overlay, #persona-modal').fadeIn(300);
+        }
+
+        function closePersonaModal() {
+          $('#persona-modal-overlay, #persona-modal').fadeOut(300);
+        }
+
+        // '찾기' 버튼 클릭 시 모달 열기
+        $('#find-persona-btn').on('click', openPersonaModal);
+
+        // 모달 닫기 버튼 또는 배경 클릭 시 모달 닫기
+        $('#modal-close-btn, #persona-modal-overlay').on('click', closePersonaModal);
+
+        // 모달 안에서 '페르소나 찾기' 버튼 클릭 시 API 호출
+        $('#modal-find-btn').on('click', async function () {
+          const userDescription = $('#user-description-input').val();
+          if (!userDescription) {
+            alert('자신에 대한 설명을 입력해주세요.');
+            return;
+          }
+
+          // 모달 내부 Scene 전환: 로딩 화면 보여주기
+          $('#modal-scene-input').hide();
+          $('#modal-scene-loading').show();
+
+          try {
+            // 🚨 백엔드 API 호출: 페르소나 찾기
+            const response = await fetch('/api/find-persona', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                description: userDescription,
+              }),
+            });
+
+            if (!response.ok) {
+              throw new Error('페르소나를 찾는 데 실패했습니다.');
+            }
+
+            const result = await response.json();
+            console.log(result);
+            const selectedPersona = personas[result.personaIndex]; // 인덱스로 페르소나 선택
+
+            if (selectedPersona) {
+              // 1. 전역 상태 업데이트
+              AppState.currentPersona = selectedPersona;
+
+              // 2. 메인 UI 업데이트 (아이콘, 이름)
+              $('#current-persona').attr('src', getGravatarUrl(selectedPersona.name));
+              $('#current-persona-name').text(selectedPersona.name);
+
+              // 3. 모달 내부 Scene 전환: 결과 표시
+              $('#modal-result-text').html(
+                `당신과 가장 어울리는 페르소나는<br><strong>'${selectedPersona.name}'</strong> 입니다!`,
+              );
+              $('#modal-scene-loading').hide();
+              $('#modal-scene-result').show();
+
+              // 4. 3초 후에 자동으로 모달 닫기
+              setTimeout(closePersonaModal, 3000);
+            } else {
+              throw new Error('추천된 페르소나를 찾을 수 없습니다.');
+            }
+          } catch (error) {
+            alert(error.message);
+            // 에러 발생 시 다시 입력 화면으로
+            $('#modal-scene-loading').hide();
+            $('#modal-scene-input').show();
           }
         });
       });

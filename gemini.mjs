@@ -1,4 +1,4 @@
-import { Type } from '@google/genai';
+import personas from './personas.mjs';
 
 function parseResponseText(response) {
   if (!response || typeof response !== 'string') {
@@ -21,6 +21,40 @@ function parseResponseText(response) {
     }
   } else {
     return '';
+  }
+}
+
+export async function findPersona(description, googleGenAI) {
+  try {
+    const prompt = `
+      You are a persona matching AI. Based on the user's self-description, choose the ONE most suitable persona from the provided list.
+      The list is a JSON array of objects. You MUST respond with only the index number of your chosen persona in the array. Do not add any other text or explanations.
+
+      **User's Self-Description:**
+      "${description}"
+
+      **Persona List (JSON):**
+      ${JSON.stringify(personas, null, 2)}
+
+      Your response must be a single number representing the index of the most suitable persona. For example: 0, 1, or 2.
+    `;
+
+    const response = await googleGenAI.models.generateContent({
+      model: 'gemini-1.5-flash',
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    });
+    console.log(response.text);
+    const index = parseInt(response.text.trim().match(/\d+/)[0], 10);
+
+    if (index < 0 || index >= personas.length) {
+      console.error('AI가 유효한 인덱스를 반환하지 않았습니다.');
+      return 0;
+    } else {
+      return index;
+    }
+  } catch (e) {
+    console.error(e);
+    return 0;
   }
 }
 
