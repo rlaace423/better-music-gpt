@@ -1,3 +1,4 @@
+import { Type } from '@google/genai';
 import personas from './personas.mjs';
 
 function parseResponseText(response) {
@@ -25,37 +26,68 @@ function parseResponseText(response) {
 }
 
 export async function findPersona(description, googleGenAI) {
+  const result = { personaIndex: 0, recommendationMessage: '' };
+
   try {
     const prompt = `
-      You are a persona matching AI. Based on the user's self-description, choose the ONE most suitable persona from the provided list.
-      The list is a JSON array of objects. You MUST respond with only the index number of your chosen persona in the array. Do not add any other text or explanations.
+      Based on the user's self-description, your tasks are:
+      1. Choose the ONE most suitable persona from the provided list.
+      2. Write a personalized recommendation message in KOREAN. The message should explain why the chosen persona is a good match for the user.
+      
+      You MUST respond in the JSON format defined by the provided schema.
 
       **User's Self-Description:**
       "${description}"
 
       **Persona List (JSON):**
       ${JSON.stringify(personas, null, 2)}
-
-      Your response must be a single number representing the index of the most suitable persona. For example: 0, 1, or 2.
     `;
 
     const response = await googleGenAI.models.generateContent({
       model: 'gemini-1.5-flash',
+      // systemInstruction은 AI의 기본 역할만 정의
+      config: {
+        systemInstruction: `You are a helpful AI assistant that matches a user to a persona.`,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            personaIndex: {
+              type: Type.NUMBER,
+              description: 'The index of the most suitable persona from the provided list (0-based).',
+            },
+            recommendationMessage: {
+              type: Type.STRING,
+              description:
+                "A personalized recommendation message for the user, written in Korean. It should explain why the chosen persona is a good match. For example: '~~한 당신의 모습은 ~~한 페르소나인 ~~와 닮았네요! 이런 점을 고려하여 추천해 드립니다.'",
+            },
+          },
+          required: ['personaIndex', 'recommendationMessage'],
+        },
+      },
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
     console.log(response.text);
-    const index = parseInt(response.text.trim().match(/\d+/)[0], 10);
+    const resultJson = JSON.parse(response.candidates[0].content.parts[0].text);
+    const { personaIndex, recommendationMessage } = resultJson;
+    // const index = parseInt(response.text.trim().match(/\d+/)[0], 10);
 
-    if (index < 0 || index >= personas.length) {
+    if (typeof personaIndex !== 'number' || personaIndex < 0 || personaIndex >= personas.length) {
       console.error('AI가 유효한 인덱스를 반환하지 않았습니다.');
-      return 0;
+      result.personaIndex = 0;
     } else {
-      return index;
+      result.personaIndex = personaIndex;
+    }
+
+    if (typeof recommendationMessage !== 'string' || recommendationMessage.trim().length === 0) {
+      console.error('AI가 유효한 설명을 반환하지 않았습니다.');
+    } else {
+      result.recommendationMessage = recommendationMessage.trim();
     }
   } catch (e) {
     console.error(e);
-    return 0;
   }
+  return result;
 }
 
 export async function generateAugmentedPrompt(prompt, persona, arts_persona, googleGenAI) {

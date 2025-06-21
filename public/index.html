@@ -1027,7 +1027,8 @@
             });
 
             if (!response.ok) {
-              throw new Error('페르소나를 찾는 데 실패했습니다.');
+              const errorData = await response.json();
+              throw new Error(errorData.message || '페르소나를 찾는 데 실패했습니다.');
             }
 
             const result = await response.json();
@@ -1043,14 +1044,16 @@
               $('#current-persona-name').text(selectedPersona.name);
 
               // 3. 모달 내부 Scene 전환: 결과 표시
-              $('#modal-result-text').html(
-                `당신과 가장 어울리는 페르소나는<br><strong>'${selectedPersona.name}'</strong> 입니다!`,
-              );
+              const modalResultTextHtml =
+                typeof result.recommendationMessage !== 'string' || result.recommendationMessage.trim().length === 0
+                  ? `당신과 가장 어울리는 페르소나는<br><strong>'${selectedPersona.name}'</strong> 입니다!`
+                  : result.recommendationMessage;
+              $('#modal-result-text').html(modalResultTextHtml);
               $('#modal-scene-loading').hide();
               $('#modal-scene-result').show();
 
               // 4. 3초 후에 자동으로 모달 닫기
-              setTimeout(closePersonaModal, 3000);
+              // setTimeout(closePersonaModal, 3000);
             } else {
               throw new Error('추천된 페르소나를 찾을 수 없습니다.');
             }

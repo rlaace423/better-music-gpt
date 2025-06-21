@@ -27,7 +27,11 @@ app.post(`/${API_PREFIX}/find-persona`, async (req, res) => {
   }
   const result = await findPersona(description, googleGenAI);
 
-  return res.json({ personaIndex: result, persona: personas[result] });
+  return res.json({
+    personaIndex: result.personaIndex,
+    persona: personas[result.personaIndex],
+    recommendationMessage: result.recommendationMessage,
+  });
 });
 
 app.post(`/${API_PREFIX}/generate-prompt`, async (req, res) => {
