@@ -1,6 +1,7 @@
 import express from 'express';
 import { GoogleGenAI } from '@google/genai';
 import config from './config.mjs';
+import personas from './personas.mjs';
 import { generateAugmentedPrompt } from './gemini.mjs';
 import errorHandler from './error-handler.mjs';
 import { generateSong, getSongStatus } from './music-gpt.mjs';
@@ -13,6 +14,10 @@ const googleGenAI = new GoogleGenAI({ apiKey: config.geminiApiKey });
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
+
+app.get(`/${API_PREFIX}/personas`, (req, res) => {
+  return res.json(personas);
+});
 
 app.post(`/${API_PREFIX}/generate-prompt`, async (req, res) => {
   const prompt = req.body?.prompt;

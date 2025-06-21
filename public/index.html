@@ -455,36 +455,14 @@
       // =================================================
       // 페르소나 데이터 정의
       // =================================================
-      const personas = [
-        {
-          name: 'Quintin',
-          persona:
-            'Quintin, a 40-year-old logistician from Converse, TX, balances curiosity with practicality, appreciating both new ideas and established methods, and maintains a unique blend of organization and flexibility in all aspects of life.',
-          arts_persona:
-            "They appreciate the gritty realism of Texas artist David Adickes' sculptures and the soulful melodies of Tejano musician Selena, often visiting the San Antonio Museum of Art and listening to her music while cooking.",
-        },
-        {
-          name: 'Mauricio',
-          persona:
-            'Mauricio, a reserved yet curious 20-year-old nurse with a passion for photography, balances ambition with pragmatism, preferring intimate gatherings over large social events.',
-          arts_persona:
-            "Mauricio, inspired by the vivid colors of Frida Kahlo's art and the storytelling of Gabriel García Márquez, finds solace in capturing the essence of moments through his photography and exploring local art galleries on weekends.",
-        },
-        {
-          name: 'Bonnie',
-          persona:
-            'Bonnie, a sociable Midwesterner, balances curiosity with practicality, hosting potlucks one moment and creating intricate spreadsheets the next, always with a competitive spark in her eye.',
-          arts_persona:
-            'Bonnie, appreciating both new ideas and established methods, enjoys local folk music performances and occasionally visits art galleries, finding inspiration in the works of Grandma Moses.',
-        },
-      ];
+      let personas = [];
 
       // =================================================
       // 1. 모든 공유 데이터를 담을 '상태 객체' 선언
       // =================================================
       const AppStateTemplate = {
         greetingIntervalId: null,
-        currentPersona: personas[0],
+        currentPersona: null,
         genPromptResult: { answer: '', prompt: '', genre: '' },
         genSongResult: { taskId: '', eta: 0 },
         songData: { songTitle: '', songUrl: '', albumCoverUrl: '', lyrics: [] },
@@ -789,7 +767,27 @@
       });
 
       // 문서가 준비되면 첫 Scene 시작
-      $(document).ready(function () {
+      $(document).ready(async function () {
+        try {
+          // 1. API를 호출하여 페르소나 데이터를 비동기적으로 받아옵니다.
+          const response = await fetch('/api/personas');
+          if (!response.ok) {
+            throw new Error('페르소나 목록을 불러오는 데 실패했습니다.');
+          }
+          personas = await response.json(); // 전역 변수에 저장
+
+          // 2. 받아온 데이터로 AppState의 기본값을 설정합니다.
+          AppStateTemplate.currentPersona = personas[0];
+          AppState = JSON.parse(JSON.stringify(AppStateTemplate));
+
+          // 3. 모든 데이터가 준비된 후, UI 초기화 함수들을 호출합니다.
+          initializePersonaSelector();
+          resetStateAndGoToScene1();
+        } catch (e) {
+          console.error(e);
+          alert('앱을 초기화하는 중 오류가 발생했습니다. 페이지를 새로고침 해주세요.');
+        }
+
         // --- 페르소나 선택기 초기화 ---
         function initializePersonaSelector() {
           const $personaList = $('#persona-list');
@@ -810,9 +808,6 @@
           $('#current-persona').attr('src', getGravatarUrl(AppState.currentPersona.name));
           $('#current-persona-name').text(AppState.currentPersona.name);
         }
-
-        initializePersonaSelector();
-        resetStateAndGoToScene1(); // 초기 진입 시에도 초기화 함수 사용
 
         // --- 페르소나 선택기 이벤트 핸들러 ---
 
