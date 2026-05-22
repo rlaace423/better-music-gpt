@@ -119,3 +119,73 @@ export async function generateAugmentedPrompt(prompt, persona, arts_persona) {
 
 // 체인 자체도 export — Phase 2(LangGraph)에서 노드로 직접 쓸 수 있도록.
 export { findPersonaChain, augmentPromptChain };
+
+// ------------------------------------------------------------------
+// 3. Multi-Agent split — findPersona를 두 개의 LLM Agent로 분리
+//    Phase 2 LangGraph의 personaMatch 노드가 두 agent를 순차 호출한다.
+//
+//    pickerAgent       : description + 페르소나 목록 → personaIndex 선택만
+//    recommenderAgent  : description + 선택된 persona → 한국어 추천 메시지
+//
+//    하나의 LLM 호출로 둘 다 받던 것을 책임 단위로 쪼개서
+//    Multi-Agent 오케스트레이션을 명시적으로 만든다.
+// ------------------------------------------------------------------
+
+const PersonaIndexSchema = z.object({
+  personaIndex: z
+    .number()
+    .int()
+    .min(0)
+    .max(personas.length - 1)
+    .describe('The 0-based index of the most suitable persona from the provided list.'),
+});
+
+const pickerPrompt = ChatPromptTemplate.fromMessages([
+  [
+    'system',
+    'You select the single most suitable persona for a user. ' +
+      'Output only the index. Do not include any commentary.',
+  ],
+  [
+    'human',
+    `User's self-description:
+"{description}"
+
+Persona list (JSON):
+{personas}
+
+Pick exactly one persona (by 0-based index).`,
+  ],
+]);
+
+export const personaPickerChain = pickerPrompt.pipe(model.withStructuredOutput(PersonaIndexSchema));
+
+const RecommendationSchema = z.object({
+  recommendationMessage: z
+    .string()
+    .describe(
+      'A personalized recommendation message in KOREAN explaining why the given persona suits the user. ' +
+        "Wrap the persona's name with single asterisks (e.g. '*Quintin*').",
+    ),
+});
+
+const recommenderPrompt = ChatPromptTemplate.fromMessages([
+  [
+    'system',
+    'You write a short, warm recommendation message in KOREAN, ' +
+      'explaining why a chosen persona suits the user. ' +
+      "Always wrap the persona's name in single asterisks (e.g., *Quintin*).",
+  ],
+  [
+    'human',
+    `User's self-description:
+"{description}"
+
+Chosen persona (JSON):
+{persona}
+
+Write the Korean recommendation message.`,
+  ],
+]);
+
+export const recommendMessageChain = recommenderPrompt.pipe(model.withStructuredOutput(RecommendationSchema));
