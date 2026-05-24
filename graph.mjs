@@ -167,14 +167,19 @@ async function pollStatusNode(state) {
 
   const raw = await getSongStatusRunnable.invoke(state.jobId);
   const c = raw?.conversion;
+  // 완료 판정: 핵심 트리오만. lyrics_timestamped_1은 instrumental일 때 빈 문자열이라 필수에서 제외.
   const completed =
     (c?.status === 'COMPLETED' || c?.status === 'GENERATION_COMPLETED') &&
     typeof c?.title_1 === 'string' &&
+    c.title_1.length > 0 &&
     typeof c?.conversion_path_1 === 'string' &&
+    c.conversion_path_1.length > 0 &&
     typeof c?.album_cover_path === 'string' &&
-    typeof c?.lyrics_timestamped_1 === 'string';
+    c.album_cover_path.length > 0;
 
   if (completed) {
+    const timestamped = c.lyrics_timestamped_1;
+    const lyrics = typeof timestamped === 'string' && timestamped.length > 0 ? JSON.parse(timestamped) : [];
     return {
       pollAttempts: attempt,
       status: 'done',
@@ -182,7 +187,8 @@ async function pollStatusNode(state) {
         title: c.title_1,
         songUrl: c.conversion_path_1,
         albumCoverUrl: c.album_cover_path,
-        lyrics: JSON.parse(c.lyrics_timestamped_1),
+        lyrics, // 빈 배열이면 instrumental
+        fallbackLyrics: typeof c.lyrics_1 === 'string' ? c.lyrics_1 : '',
       },
     };
   }

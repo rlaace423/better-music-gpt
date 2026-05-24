@@ -833,6 +833,8 @@
               .fadeIn(); // 부드럽게 나타나기
           }
 
+          // 완료 판정: 핵심 트리오(title_1, conversion_path_1, album_cover_path)만 갖춰지면 완료.
+          // lyrics_timestamped_1은 instrumental 곡일 때 빈 문자열로 와서, 필수로 두면 영원히 안 끝남.
           if (
             (statusResult?.conversion?.status === 'COMPLETED' ||
               statusResult?.conversion?.status === 'GENERATION_COMPLETED') &&
@@ -841,16 +843,19 @@
             typeof statusResult?.conversion?.conversion_path_1 === 'string' &&
             statusResult.conversion.conversion_path_1.length > 0 &&
             typeof statusResult?.conversion?.album_cover_path === 'string' &&
-            statusResult.conversion.album_cover_path.length > 0 &&
-            typeof statusResult?.conversion?.lyrics_timestamped_1 === 'string' &&
-            statusResult.conversion.lyrics_timestamped_1.length > 0
+            statusResult.conversion.album_cover_path.length > 0
           ) {
             clearInterval(percentIntervalId);
             $('.inline-spinner').hide();
             AppState.songData.songTitle = statusResult.conversion.title_1;
             AppState.songData.songUrl = statusResult.conversion.conversion_path_1;
             AppState.songData.albumCoverUrl = statusResult.conversion.album_cover_path;
-            AppState.songData.lyrics = JSON.parse(statusResult.conversion.lyrics_timestamped_1);
+            // 가사: timestamped가 있으면 karaoke 모드, 없으면 lyrics_1 평문 fallback (예: "[Instrumental]")
+            const timestamped = statusResult.conversion.lyrics_timestamped_1;
+            AppState.songData.lyrics =
+              typeof timestamped === 'string' && timestamped.length > 0 ? JSON.parse(timestamped) : [];
+            AppState.songData.fallbackLyrics =
+              typeof statusResult.conversion.lyrics_1 === 'string' ? statusResult.conversion.lyrics_1 : '';
             displaySong();
             showScene('scene3');
             break;
@@ -868,10 +873,18 @@
         const $lyricsContainer = $('#lyrics-container');
         $lyricsContainer.empty();
 
-        AppState.songData.lyrics.forEach((line) => {
-          const $p = $('<p>').text(line.text).attr('data-time', line.start);
+        if (AppState.songData.lyrics && AppState.songData.lyrics.length > 0) {
+          // 타임스탬프 가사가 있으면 karaoke 모드
+          AppState.songData.lyrics.forEach((line) => {
+            const $p = $('<p>').text(line.text).attr('data-time', line.start);
+            $lyricsContainer.append($p);
+          });
+        } else {
+          // 없으면 fallback(예: "[Instrumental]")을 한 줄로 표시. 하이라이트는 적용 안 됨.
+          const fallback = AppState.songData.fallbackLyrics || '[Instrumental]';
+          const $p = $('<p>').text(fallback).attr('data-time', '0');
           $lyricsContainer.append($p);
-        });
+        }
       }
 
       // Scene 3: 노래방 가사 하이라이트 기능 (수정할 필요 없음)
