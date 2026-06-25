@@ -1,5 +1,4 @@
 import express from 'express';
-import { GoogleGenAI } from '@google/genai';
 import config from './config.mjs';
 import personas from './personas.mjs';
 import { findPersona, generateAugmentedPrompt } from './gemini.mjs';
@@ -9,7 +8,6 @@ import { generateSong, getSongStatus } from './music-gpt.mjs';
 const API_PREFIX = 'api';
 
 const app = express();
-const googleGenAI = new GoogleGenAI({ apiKey: config.geminiApiKey });
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,7 +23,7 @@ app.post(`/${API_PREFIX}/find-persona`, async (req, res) => {
   if (!description || description.length === 0) {
     throw new Error('description과 personas 배열이 필요합니다.');
   }
-  const result = await findPersona(description, googleGenAI);
+  const result = await findPersona(description);
 
   return res.json({
     personaIndex: result.personaIndex,
@@ -42,7 +40,7 @@ app.post(`/${API_PREFIX}/generate-prompt`, async (req, res) => {
   if (!prompt || prompt.length === 0) {
     throw new Error('내용을 입력헤주세요!');
   }
-  const result = await generateAugmentedPrompt(prompt, persona, arts_persona, googleGenAI);
+  const result = await generateAugmentedPrompt(prompt, persona, arts_persona);
 
   return res.status(200).json({
     status: 'success',
@@ -81,6 +79,7 @@ app.get(`/${API_PREFIX}/get-song-status`, async (req, res) => {
 
 app.use(errorHandler);
 
-app.listen(process.env.PORT, '0.0.0.0', async () => {
-  console.log(`Better-Music-GPT Listening on port ${config.port}`);
+const port = process.env.PORT || config.port;
+app.listen(port, '0.0.0.0', async () => {
+  console.log(`Better-Music-GPT Listening on port ${port}`);
 });
